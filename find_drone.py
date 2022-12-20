@@ -2,11 +2,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy
 import heapq
+import math
+
+'''
+To Do : 
+
+Check and change performAction
+Change logic in Astar
+Change heuristics to get different length sequence
+
+'''
 
 
 class Finder:
     def __init__(self):
-        # self.actions = ["UP", "DOWN", "LEFT", "RIGHT"]
         return
 
     def check(self, grid):
@@ -24,38 +33,6 @@ class Finder:
         print(len(ans))
         return ans
 
-    def aStarSearch(self, grid):
-        fringe = []
-        heapq.heapify(fringe)
-        self.sequence = []
-        
-        self.visited = set()
-
-        '''
-        add initial state to fringe
-
-        loop start
-
-        
-
-        compute possible next states based on actions.
-        calculate heuristic for these states and add into fringe.
-
-        Take from priority queue, the state with least value and move to that state.
-        Add the action to sequence.
-
-        check if this state is goal state. if true return sequence.
-
-        Store probability array also in heap
-        '''
-
-    
-
-        return
-    '''
-    ================================CHANGE BELOW CODE===========================
-    '''
-
     def convertToTuple(self, grid):
         lst = []
 
@@ -63,38 +40,39 @@ class Finder:
             lst.append(tuple(i))
 
         return hash(tuple(lst))
-    
-    def computeMaxDistance(self, grid):
 
-        maxDist = 0
-        n = len(grid)
-        m = len(grid[0])
+    def compute_heuristic(self, probs):
+        heuristic = 0
 
-        n = len(grid)
-        for i in range(n):
-            for j in range(m):
+        #one of the heuristic I am using is the max distance between any two nodes with non-zero probability.
+        # I computed this by iterating through the entire array and checking for distance.
+        maxdist = 0
+        for i in range(len(probs)):
+            for j in range(len(probs[0])):
                 d = 0
-                if grid[i][j] > 0:
-                    for k in range(n):
-                        for l in range(m):
-                            if grid[k][l] > 0:
-                                d = max(d, self.computeDistance((i, j), (k, l)))
+                #compute only if it has probability more than 0
+                if probs[i][j] > 0:
+                    for p in range(len(probs)):
+                        for q in range(len(probs[0])):
+                            if probs[p][q] > 0:
+                                
+                                #distance between these two nodes 
 
-                maxDist = max(maxDist, d)
+                                # calculate manhattan distance
+                                manhattan = abs(p - i) + abs(q - j)
 
-        return maxDist
+                                d = max(d, manhattan)
 
-    def computeDistance(self, p1, p2):
-        return abs(p2[1] - p1[1]) + abs(p2[0] - p1[0])
-    
-    def printNonZeroCount(self, grid):
+                maxdist = max(maxdist, d)
+
         ctr = 0
-        for i in grid:
+        for i in probs:
             for j in i:
                 if j > 0:
                     ctr += 1
-
-        return ctr
+        
+        #add weights to heuristic
+        return (50 * maxdist) * (5 * ctr)
 
     def performAction(self, grid, action=[]):
         if type(action) == list:
@@ -123,9 +101,9 @@ class Finder:
         self.actions = ["UP", "DOWN", "LEFT", "RIGHT"]
         probs = copy.deepcopy(self.probs)
 
-        heuristic = (50 * self.computeMaxDistance(probs)) * ( 5 * self.printNonZeroCount(probs))
+        h = self.compute_heuristic(probs)
 
-        heap.append((heuristic, [], probs))
+        heap.append((h, [], probs))
 
         visited = set()
 
@@ -154,7 +132,7 @@ class Finder:
 
                 newprobs = self.performAction(probs, act)
 
-                newHeu = (50 * self.computeMaxDistance(newprobs)) * ( 5 * self.printNonZeroCount(newprobs))
+                newHeu = self.compute_heuristic(newprobs)
 
                 if hash(self.convertToTuple(newprobs)) not in visited:
                     visited.add(hash(self.convertToTuple(newprobs)))
@@ -215,7 +193,7 @@ class Finder:
         
         self.grid = []
         self.opencells = 0
-        with open("input2.txt", "r") as file:
+        with open("schematic.txt", "r") as file:
             reader = file.readlines()
 
             for r in reader:
