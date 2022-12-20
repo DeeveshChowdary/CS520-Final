@@ -6,7 +6,7 @@ import heapq
 
 class Finder:
     def __init__(self):
-        self.actions = ["UP", "DOWN", "LEFT", "RIGHT"]
+        # self.actions = ["UP", "DOWN", "LEFT", "RIGHT"]
         return
 
     def check(self, grid):
@@ -28,7 +28,7 @@ class Finder:
         fringe = []
         heapq.heapify(fringe)
         self.sequence = []
-        self.actions = ['R', 'D', 'L', 'U']
+        
         self.visited = set()
 
         '''
@@ -63,10 +63,6 @@ class Finder:
             lst.append(tuple(i))
 
         return hash(tuple(lst))
-
-    def heuristic(self, grid, actions):
-
-        return (50 * self.computeMaxDistance(grid)) * (5 * self.printNonZeroCount(grid))
     
     def computeMaxDistance(self, grid):
 
@@ -124,25 +120,24 @@ class Finder:
     def astar(self):
 
         heap = []
+        self.actions = ["UP", "DOWN", "LEFT", "RIGHT"]
+        probs = copy.deepcopy(self.probs)
 
-        grid = copy.deepcopy(self.probs)
+        heuristic = (50 * self.computeMaxDistance(probs)) * ( 5 * self.printNonZeroCount(probs))
 
-        h = self.heuristic(grid, [])
-
-        heap.append((h, [], grid))
+        heap.append((heuristic, [], probs))
 
         visited = set()
 
-        visited.add(hash(self.convertToTuple(grid)))
+        visited.add(hash(self.convertToTuple(probs)))
         while heap:
             elem = heapq.heappop(heap)
-            # print(elem)
 
             if self.check(elem[2]):
                 return elem[1]
 
             actions = elem[1]
-            grid = elem[2]
+            probs = elem[2]
             heu = elem[0]
 
             for act in self.actions:
@@ -157,13 +152,13 @@ class Finder:
                 if actions and actions[-1] == "DOWN" and act == "UP":
                     continue
 
-                newGrid = self.performAction(grid, act)
+                newprobs = self.performAction(probs, act)
 
-                newHeu = self.heuristic(newGrid, actions + [act])
+                newHeu = (50 * self.computeMaxDistance(newprobs)) * ( 5 * self.printNonZeroCount(newprobs))
 
-                if hash(self.convertToTuple(newGrid)) not in visited:
-                    visited.add(hash(self.convertToTuple(newGrid)))
-                    heapq.heappush(heap, (newHeu, actions[:] + [act], newGrid))
+                if hash(self.convertToTuple(newprobs)) not in visited:
+                    visited.add(hash(self.convertToTuple(newprobs)))
+                    heapq.heappush(heap, (newHeu, actions[:] + [act], newprobs))
 
         return []
 
