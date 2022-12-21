@@ -2,18 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy
 import heapq
-from queue import deque
-
-'''
-To Do : 
-
-Check and change performAction
-Change logic in Astar
-Change heuristics to get different length sequence
-Change manhattan distance to bfs
-
-change code for bfs
-'''
 
 
 class Finder:
@@ -84,7 +72,7 @@ class Finder:
                 if (neighbor[0],neighbor[1]) not in seen:
                     queue.append([neighbor, curr[1]+1 ])
                     seen.add((neighbor[0],neighbor[1]))
-        # return -1
+        
     def getDistances(self):
         
         dummy = []
@@ -138,28 +126,22 @@ class Finder:
                     ctr += 1
         
         #add weights to heuristic
-        return ( 80 * (maxdist ) ) * ((10 * ctr)) * ( len(actions))
+        return ( 80 * (maxdist) + ctr ) * ((10 * ctr) ) * ( len(actions))
 
-    def performAction(self, grid, action=[]):
-        if type(action) == list:
-            newGrid = copy.deepcopy(grid)
-            for act in action:
-                newGrid = self.performAction(newGrid, act)
-            return newGrid
+    def moveDrone(self, probs, action):
+        
+        if action == "U":
+            newProbs = self.move_up(probs)
+        elif action == "D":
+            newProbs = self.move_down(probs)
+        elif action == "L":
+            newProbs = self.move_left(probs)
+        elif action == "R":
+            newProbs = self.move_right(probs)
         else:
-            if action == "U":
-                newGrid = self.move_up(grid)
-            elif action == "D":
-                newGrid = self.move_down(grid)
-            elif action == "L":
-                newGrid = self.move_left(grid)
-            elif action == "R":
-                newGrid = self.move_right(grid)
-            else:
-                newGrid = copy.deepcopy(grid)
-
-            return newGrid
-
+            newProbs = copy.deepcopy(probs)
+        return newProbs
+        
     def testActions( self, probs, actions):
         print("before: ")
         self.display(probs)
@@ -184,54 +166,48 @@ class Finder:
         
         return newGrid
 
+    def getValidActions(self, sequence):
+        
+        if sequence and sequence[-1] == 'L':
+            return ['U', 'L', 'D']
+        elif sequence and sequence[-1] == 'U':
+            return ['L', 'R', 'U']
+        elif sequence and sequence[-1] == 'R':
+            return  ['U', 'R', 'D']
+        elif sequence and sequence[-1] == 'D':
+            return ['D', 'R', 'L']
+        else: 
+            return ['L','U','R','D']
+
     def astar(self):
 
         heap = []
-        self.actions = ["U", "D", "L", "R"]
+        validActions = ['L','U','R','D']
         probs = copy.deepcopy(self.probs)
-        h = self.compute_heuristic(probs,[])
-        heap.append((h, [], probs))
+        heuristic = self.compute_heuristic(probs,[])
+        heap.append((heuristic, [], probs))
         visited = set()
+        visited.add((tuple(map(tuple, probs))))
 
-
-        visited.add(hash(tuple(map(tuple, probs))))
         while heap:
-            elem = heapq.heappop(heap)
+            currstate = heapq.heappop(heap)
 
-            if self.check(elem[2]):
-                # print(elem[2])
-                return elem[1]
+            sequence = currstate[1]
+            probs = currstate[2]
 
-            actions = elem[1]
-            probs = elem[2]
-            heu = elem[0]
+            if self.check(probs):
+                return sequence
 
-            for act in self.actions:
-                if actions and actions[-1] == "L" and act == "R":
-                    continue
-                if actions and actions[-1] == "R" and act == "L":
-                    continue
-
-                if actions and actions[-1] == "U" and act == "D":
-                    continue
-
-                if actions and actions[-1] == "D" and act == "U":
-                    continue
-
-                newprobs = self.performAction(probs, act)
-
-                newHeu = self.compute_heuristic(newprobs,actions)
-
-                if hash(tuple(map(tuple, newprobs))) not in visited:
-                    visited.add(hash(tuple(map(tuple, newprobs))))
-                    heapq.heappush(heap, (newHeu, actions[:] + [act], newprobs))
+            validActions = self.getValidActions(sequence)
+            for action in validActions:
+                newprobs = self.moveDrone(probs, action)
+                newheuristic = self.compute_heuristic(newprobs,sequence)
+                if (tuple(map(tuple, newprobs))) not in visited:
+                    visited.add((tuple(map(tuple, newprobs))))
+                    heapq.heappush(heap, (newheuristic, sequence[:] + [action], newprobs))
 
         return []
 
-
-    '''
-    ==================================================== No Changes below ===================================================
-    '''
     def move_right(self, probs):
         newprobs = copy.deepcopy(probs)
         for i in range(len(self.probs)):
@@ -329,13 +305,4 @@ if __name__ == "__main__":
     # newprobs = f.move_down(f.probs)
     # print(newprobs)
     print(f.find_drone())
-    # print(f.probs)
-
-    # print(f.truedistance([0,0],[18,18],f.probs))
-    # actions = ['LEFT', 'LEFT', 'UP', 'UP', 'UP', 'UP', 'LEFT', 'LEFT', 'LEFT', 'UP', 'UP', 'LEFT', 'LEFT', 'UP', 'UP', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'RIGHT', 'UP', 'LEFT', 'UP', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'UP', 'LEFT', 'DOWN', 'DOWN', 'RIGHT', 'DOWN', 'DOWN', 'DOWN', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'UP', 'UP', 'UP', 'RIGHT', 'UP', 'LEFT', 'UP', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'DOWN', 'DOWN', 'DOWN', 'DOWN', 'RIGHT', 'DOWN', 'DOWN', 'LEFT', 'DOWN', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'UP', 'RIGHT', 'RIGHT', 'UP', 'UP', 'UP', 'UP', 'UP', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'UP', 'RIGHT', 'DOWN', 'DOWN', 'LEFT', 'UP', 'LEFT', 'LEFT', 'DOWN', 'RIGHT', 'RIGHT', 'UP', 'LEFT', 'UP', 'UP', 'UP', 'UP', 'UP', 'LEFT', 'UP', 'RIGHT', 'UP', 'RIGHT', 'UP', 'LEFT', 'DOWN', 'LEFT', 'UP', 'LEFT', 'DOWN', 'DOWN', 'RIGHT', 'RIGHT', 'RIGHT', 'DOWN', 'DOWN', 'DOWN', 'DOWN', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP']
-    # f.testActions(f.probs,actions)
-
-    #===============================================TEST DISTANCE MATRIX===============================
-    # dummy = f.getDistances()
-
-    # print(dummy[0][0][0][18])
+    
