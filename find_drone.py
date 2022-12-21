@@ -18,7 +18,6 @@ change code for bfs
 
 class Finder:
     def __init__(self):
-        self.distanceMatrix = None
         return
 
     def check(self, grid):
@@ -36,65 +35,73 @@ class Finder:
         print(len(ans))
         return ans
 
-    def convertToTuple(self, grid):
-        lst = []
+    def getNeighbors(self,cell,probs):
+        neighbors = []
+        row = cell[0]
+        col = cell[1]
 
-        for i in grid:
-            lst.append(tuple(i))
+        #check top neighbor
+        if row-1 >= 0:
+            if probs[row-1][col] != -1:
+                neighbors.append([row-1,col])
 
-        return hash(tuple(lst))
+        #check bottom neighbor
+        if row + 1 < len(probs):
+            if probs[row+1][col] != -1:
+                neighbors.append([row+1,col])
 
-    def bfs(self, destination, grid):
+        #check left neighbor
+        if col - 1 >= 0:
+            if probs[row][col-1] != -1:
+                neighbors.append([row,col-1])
 
-        queue = deque()
+        #check right neighbor
+        if col + 1 < len(probs[0]):
+            if probs[row][col+1] != -1:
+                neighbors.append([row,col+1])  
 
-        queue.append((destination, 0))
+        return neighbors
+    
+    def truedistance(self, source, destination, probs):
 
-        visited = set()
-        visited.add(destination)
+        if self.probs[source[0]][source[1]] == -1 or self.probs[destination[0]][destination[1]] == -1:
+            return -1
 
-        rows = [-1, 1, 0, 0]
-        cols = [0, 0, -1, 1]
-        path = [[-1 for i in range(len(grid[0]))] for j in range(len(grid))]
-        directions = ["DOWN", "UP", "RIGHT", "LEFT"]
-
+        queue = [[source,0]]
+        seen = set()
+        seen.add((source[0],source[1]))
+        
         while queue:
-            elem = queue.popleft()
-            row = elem[0][0]
-            col = elem[0][1]
-            for i in range(4):
-                newRow = row + rows[i]
-                newCol = col + cols[i]
+            
+            curr = queue.pop(0)
+            # print(curr)
+            if curr[0] == destination:
+                return curr[1]
+            
+            neighbors = self.getNeighbors(curr[0],probs)
 
-                if (
-                    0 <= newRow < len(grid)
-                    and 0 <= newCol < len(grid[0])
-                    and (newRow, newCol) not in visited
-                    and grid[newRow][newCol] != -1
-                ):
-                    visited.add((newRow, newCol))
-                    path[newRow][newCol] = elem[1] + 1
-                    queue.append(((newRow, newCol), elem[1] + 1))
+            for neighbor in neighbors:
+                if (neighbor[0],neighbor[1]) not in seen:
+                    queue.append([neighbor, curr[1]+1 ])
+                    seen.add((neighbor[0],neighbor[1]))
+        # return -1
+    def getDistances(self):
+        
+        dummy = []
 
-        return path
-
-    def fourMatrix(self, grid):
-        movi = [
-            [
-                [[0 for i in range(len(grid[0]))] for j in range(len(grid))]
-                for k in range(len(grid[0]))
-            ]
-            for l in range(len(grid))
-        ]
-
-        for i in range(len(grid)):
-            for j in range(len(grid[0])):
-                path = self.bfs((i, j), grid)
-                for k in range(len(path)):
-                    for l in range(len(path[0])):
-                        movi[i][j][k][l] = path[k][l]
-
-        self.distanceMatrix = movi
+        #take source
+        for i in range(len(self.probs)):
+            temp = []
+            for j in range(len(self.probs[0])):
+                temp2 = []
+                for p in range(len(self.probs)):
+                    temp3 = []
+                    for q in range(len(self.probs[0])):
+                        temp3.append(self.truedistance([i,j],[p,q],self.probs))
+                    temp2.append(temp3)
+                temp.append(temp2)
+            dummy.append(temp)
+        return dummy
 
     def compute_heuristic(self, probs, actions):
         heuristic = 0
@@ -112,12 +119,12 @@ class Finder:
                             if probs[p][q] > 0:
                                 
                                 #distance between these two nodes
-                                if not self.distanceMatrix:
+                                # if not self.distanceMatrix:
                                     
-                                    self.fourMatrix(self.probs) 
+                                #     self.fourMatrix(self.probs) 
                                 
-                                manhattan = self.distanceMatrix[p][q][i][j]
-                                # calculate manhattan distance
+                                manhattan = self.allPairDist[p][q][i][j]
+                                # calculate manhattan distance  self.truedistance([i,j],[p,q],self.probs)
                                 # manhattan = abs(p - i) + abs(q - j)
 
                                 d = max(d, manhattan)
@@ -138,16 +145,15 @@ class Finder:
             newGrid = copy.deepcopy(grid)
             for act in action:
                 newGrid = self.performAction(newGrid, act)
-
             return newGrid
         else:
-            if action == "UP":
+            if action == "U":
                 newGrid = self.move_up(grid)
-            elif action == "DOWN":
+            elif action == "D":
                 newGrid = self.move_down(grid)
-            elif action == "LEFT":
+            elif action == "L":
                 newGrid = self.move_left(grid)
-            elif action == "RIGHT":
+            elif action == "R":
                 newGrid = self.move_right(grid)
             else:
                 newGrid = copy.deepcopy(grid)
@@ -181,16 +187,14 @@ class Finder:
     def astar(self):
 
         heap = []
-        self.actions = ["UP", "DOWN", "LEFT", "RIGHT"]
+        self.actions = ["U", "D", "L", "R"]
         probs = copy.deepcopy(self.probs)
-
         h = self.compute_heuristic(probs,[])
-
         heap.append((h, [], probs))
-
         visited = set()
 
-        visited.add(hash(self.convertToTuple(probs)))
+
+        visited.add(hash(tuple(map(tuple, probs))))
         while heap:
             elem = heapq.heappop(heap)
 
@@ -203,27 +207,31 @@ class Finder:
             heu = elem[0]
 
             for act in self.actions:
-                if actions and actions[-1] == "LEFT" and act == "RIGHT":
+                if actions and actions[-1] == "L" and act == "R":
                     continue
-                if actions and actions[-1] == "RIGHT" and act == "LEFT":
-                    continue
-
-                if actions and actions[-1] == "UP" and act == "DOWN":
+                if actions and actions[-1] == "R" and act == "L":
                     continue
 
-                if actions and actions[-1] == "DOWN" and act == "UP":
+                if actions and actions[-1] == "U" and act == "D":
+                    continue
+
+                if actions and actions[-1] == "D" and act == "U":
                     continue
 
                 newprobs = self.performAction(probs, act)
 
                 newHeu = self.compute_heuristic(newprobs,actions)
 
-                if hash(self.convertToTuple(newprobs)) not in visited:
-                    visited.add(hash(self.convertToTuple(newprobs)))
+                if hash(tuple(map(tuple, newprobs))) not in visited:
+                    visited.add(hash(tuple(map(tuple, newprobs))))
                     heapq.heappush(heap, (newHeu, actions[:] + [act], newprobs))
 
         return []
 
+
+    '''
+    ==================================================== No Changes below ===================================================
+    '''
     def move_right(self, probs):
         newprobs = copy.deepcopy(probs)
         for i in range(len(self.probs)):
@@ -303,6 +311,8 @@ class Finder:
                 else:
                     self.temp.append(-1)
             self.probs.append(self.temp)
+        
+        self.allPairDist = self.getDistances()
 
     def display(self, probs):
         for row in probs:
@@ -320,5 +330,12 @@ if __name__ == "__main__":
     # print(newprobs)
     print(f.find_drone())
     # print(f.probs)
+
+    # print(f.truedistance([0,0],[18,18],f.probs))
     # actions = ['LEFT', 'LEFT', 'UP', 'UP', 'UP', 'UP', 'LEFT', 'LEFT', 'LEFT', 'UP', 'UP', 'LEFT', 'LEFT', 'UP', 'UP', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'RIGHT', 'UP', 'LEFT', 'UP', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'UP', 'LEFT', 'DOWN', 'DOWN', 'RIGHT', 'DOWN', 'DOWN', 'DOWN', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'UP', 'UP', 'UP', 'RIGHT', 'UP', 'LEFT', 'UP', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'DOWN', 'DOWN', 'DOWN', 'DOWN', 'RIGHT', 'DOWN', 'DOWN', 'LEFT', 'DOWN', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'LEFT', 'UP', 'RIGHT', 'RIGHT', 'UP', 'UP', 'UP', 'UP', 'UP', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'UP', 'RIGHT', 'DOWN', 'DOWN', 'LEFT', 'UP', 'LEFT', 'LEFT', 'DOWN', 'RIGHT', 'RIGHT', 'UP', 'LEFT', 'UP', 'UP', 'UP', 'UP', 'UP', 'LEFT', 'UP', 'RIGHT', 'UP', 'RIGHT', 'UP', 'LEFT', 'DOWN', 'LEFT', 'UP', 'LEFT', 'DOWN', 'DOWN', 'RIGHT', 'RIGHT', 'RIGHT', 'DOWN', 'DOWN', 'DOWN', 'DOWN', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'RIGHT', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP', 'UP']
     # f.testActions(f.probs,actions)
+
+    #===============================================TEST DISTANCE MATRIX===============================
+    # dummy = f.getDistances()
+
+    # print(dummy[0][0][0][18])
